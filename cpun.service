@@ -1,0 +1,9 @@
+[Unit]
+Description=Send notifications for package updates in yaourt or pacman
+
+[Service]
+User=root
+ExecStart=/usr/bin/arch-cpun
+
+[Install]
+WantedBy=arch-cpun.timer
