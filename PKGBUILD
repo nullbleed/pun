@@ -2,8 +2,8 @@
 
 pkgname=pun-git
 _pkgname=pun
-pkgver=v0.1.c0b4de1
-_pkgver=v0.1
+pkgver=v0.2.c0b4de1
+_pkgver=v0.2
 pkgrel=1
 pkgdesc="notifier for system updates (systemd, mail)"
 arch=('any')
@@ -28,6 +28,8 @@ package() {
 
   install -Dm644 "pun.service" "$pkgdir/usr/lib/systemd/system/pun.service"
   install -Dm644 "pun.timer" "$pkgdir/usr/lib/systemd/system/pun.timer"
+
+  install -d "$pkgdir/var/lib/pun/"
 }
 
 # vim:set ts=2 sw=2 et:
