@@ -3,6 +3,7 @@
 pkgname=pun-git
 _pkgname=pun
 pkgver=v0.1.c0b4de1
+_pkgver=v0.1
 pkgrel=1
 pkgdesc="notifier for system updates (systemd, mail)"
 arch=('any')
@@ -15,7 +16,8 @@ md5sums=('SKIP')
 
 pkgver() {
   cd "$_pkgname"
-  git describe --always | sed 's|-|.|g'
+  _gitver="$(git describe --always | sed 's|-|.|g')"
+  echo "$_pkgver.$_gitver"
 }
 
 package() {

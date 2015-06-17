@@ -1,6 +1,8 @@
 #!/bin/bash
 #
 # pun - Pacman Update Notifier
+# 
+# v0.1 / 2015.06.17
 #
 # © 2015 Bernd Busse, Daniel Jankowski
 # Licensed under the LGPLv3
