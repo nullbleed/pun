@@ -4,32 +4,40 @@
 #
 # © 2015 Bernd Busse, Daniel Jankowski
 
-if [[ -x "$(which yaourt)" ]]; then
-    pkg_mgr="$(which yaourt)"
-    upt_flg="-Qua"
+if [[ -x "$(which pacman)" ]]; then
+    _pacman="$(which pacman)"
 else
-    if [[ -x "$(which pacman)" ]]; then
-        pkg_mgr="$(which pacman)"
-        upt_flg="-Qu"
-    else
-        print "Error: cannot find packagemanager"
-        exit 1
-    fi
+    echo "Error: cannot find pacman. Your system is weird!"
+    exit 1
+fi
+
+if [[ -x "$(which package-query)" ]]; then
+    _query="$(which package-query)"
+    list_cmd="$_query -QAu"
+else
+    list_cmd="$_pacman --color always -Qu"
 fi
 
 # update package database
-$pkg_mgr -Sy >& /dev/null
+$_pacman -Sy >& /dev/null
 if (( $? != 0 )); then
     echo "Error updating database"
     exit 1
 fi
 
 # get updatelist
-pkg_list="$( $pkg_mgr $upt_flg )"
+pkg_list="$( $list_cmd )"
+if (( $? != 0 )); then
+    echo "Error: cannot fetch update list"
+    exit 1
+fi
+
 num_pkg="$( echo -e $pkg_list | wc -l )"
+last_upd="$( grep -e 'starting full system upgrade' /var/log/pacman.log | sed -re 's/^\[([0-9]{4}-[0-9]{2}-[0-9]{2}\s[0-9]{2}:[0-9]{2})\]\s.*$/\1/g' | tail -n -1 )"
 
 if (( $num_pkg == 0 )); then
-    echo "System is up to date"
+    echo "System is up to date."
+    echo "Last update: $last_upd."
 else
     echo "You have $num_pkg updates:"
     _old_ifs=$IFS
@@ -37,5 +45,6 @@ else
         echo "    :: $pkg"
     done
     IFS=$_old_ifs
+    echo "Last update: $last_upd."
 fi
 
