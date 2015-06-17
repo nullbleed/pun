@@ -1,7 +1,8 @@
 [Unit]
-Description=Send notifications for package updates in yaourt or pacman
+Description=Check for package updates and send mail accordingly
 
 [Service]
+Type=simple
 User=root
 ExecStart=/usr/bin/pun
 

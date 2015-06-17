@@ -1,8 +1,10 @@
 [Unit]
-Description=Runs pun daily
+Description=Run Pacman Update Notifer every hour
 
 [Timer]
-OnUnitActiveSec=1d
+OnBootSec=10min
+OnUnitActiveSec=1h
+Unit=pun.service
 
 [Install]
 WantedBy=timers.target
