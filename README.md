@@ -17,8 +17,8 @@ Install
 
 - To run pun automatically once a day use the systemd-timer
     
-    sudo systemctl start pun.timer
-    sudo systemctl enable pun.timer
+        sudo systemctl start pun.timer
+        sudo systemctl enable pun.timer
 
 
 TODO
