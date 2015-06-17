@@ -1,16 +1,16 @@
 # Maintainer: Bernd Busse <bernd AT bussenet DOT de>
 
-pkgname=cpun-git
-_pkgname=cpun
+pkgname=pun-git
+_pkgname=pun
 pkgver=v0.1.c0b4de1
 pkgrel=1
-pkgdesc="cronjob/systemd-timer to notify about system updates"
+pkgdesc="notifier for system updates (systemd, mail)"
 arch=('any')
-url="https://github.com/nullbleed/cpun"
+url="https://github.com/nullbleed/pun"
 license=('LGPL3')
 depends=('pacman' 'package-query')
 makedepends=('git')
-source=('git://github.com/nullbleed/cpun.git')
+source=('git://github.com/nullbleed/pun.git')
 md5sums=('SKIP')
 
 pkgver() {
@@ -22,10 +22,10 @@ package() {
   cd "$_pkgname"
   install -Dm644 "LICENSE" "$pkgdir/usr/share/licenses/$_pkgname/LICENSE"
 
-  install -Dm755 "cpun" "$pkgdir/usr/bin/cpun"
+  install -Dm755 "pun" "$pkgdir/usr/bin/pun"
 
-  install -Dm644 "cpun.service" "$pkgdir/usr/lib/systemd/system/cpun.service"
-  install -Dm644 "cpun.timer" "$pkgdir/usr/lib/systemd/system/cpun.timer"
+  install -Dm644 "pun.service" "$pkgdir/usr/lib/systemd/system/pun.service"
+  install -Dm644 "pun.timer" "$pkgdir/usr/lib/systemd/system/pun.timer"
 }
 
 # vim:set ts=2 sw=2 et:
