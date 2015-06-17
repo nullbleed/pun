@@ -1,19 +1,31 @@
-arch-cpun - cron pacman update notifier
-=================================================
+cpun - cron pacman update notifier
+==================================
+
+systemd service that sends an email if your system has pending updates.
 
 Features
 --------
 
 - small bash-script (for use as a cronjob)
 - aur support with `package-query`
+- systemd-unit with timer
+
+
+Install
+-------
+
+- The run cpun automatically once every day use the systemd-timer
+    
+    sudo systemctl enable cpun.timer
+    sudo systemctl start cpun.timer
 
 
 TODO
 ----
 
 - sendmail integration
-- systemd units
 - install and usage instructions in README
+- cron example
 - PKGBUILD
 
 
