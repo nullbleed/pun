@@ -39,9 +39,9 @@ num_pkg="$( echo -e "${pkg_list}" | wc -l )"
 last_upd="$( grep -e 'starting full system upgrade' /var/log/pacman.log | sed -re 's/^\[([0-9]{4}-[0-9]{2}-[0-9]{2}\s[0-9]{2}:[0-9]{2})\]\s.*$/\1/g' | tail -n -1 )"
 
 # print message
+echo "Last update: $last_upd."
 if (( $num_pkg == 0 )); then
     echo "System is up to date."
-    echo "Last update: $last_upd."
 else
     echo "You have $num_pkg updates:"
     _old_ifs=$IFS
@@ -49,6 +49,5 @@ else
         echo "    :: $pkg"
     done
     IFS=$_old_ifs
-    echo "Last update: $last_upd."
 fi
 
