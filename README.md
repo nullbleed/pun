@@ -16,7 +16,7 @@ Install
 
 - To run cpun automatically once every day use the systemd-timer
     
-    `sudo systemctl enable spun.service`
+    `sudo systemctl enable cpun.service`
     `sudo systemctl enable cpun.timer`
     `sudo systemctl start cpun.timer`
 
