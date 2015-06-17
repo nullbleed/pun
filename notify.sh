@@ -6,16 +6,16 @@
 
 if [[ -x "$(which yaourt)" ]]; then
     pkg_mgr="$(which yaourt)"
+    upt_flg="-Qua"
 else
     if [[ -x "$(which pacman)" ]]; then
         pkg_mgr="$(which pacman)"
+        upt_flg="-Qu"
     else
         print "Error: cannot find packagemanager"
         exit 1
     fi
 fi
-
-echo "use pkgmgr: $pkg_mgr"
 
 # update package database
 $pkg_mgr -Sy >& /dev/null
@@ -25,7 +25,7 @@ if (( $? != 0 )); then
 fi
 
 # get updatelist
-pkg_list="$( $pkg_mgr -Qu )\nnoch ein paket\nviel paket"
+pkg_list="$( $pkg_mgr $upt_flg )"
 num_pkg="$( echo -e $pkg_list | wc -l )"
 
 if (( $num_pkg == 0 )); then
