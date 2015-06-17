@@ -1,10 +1,11 @@
-arch-cpun - notifier for updates in pacman or aur
+arch-cpun - cron pacman update notifier
 =================================================
 
 Features
 --------
 
 - small bash-script (for use as a cronjob)
+- aur support with `package-query`
 
 
 TODO
@@ -19,7 +20,7 @@ TODO
 License
 -------
 
-(c) 2015 Bernd Busse, Daniel Jankowski
-The GNU Lesser General Public License 3.
+(c) 2015 Bernd Busse, Daniel Jankowski  
+The GNU Lesser General Public License 3 (LGPLv3).  
 See [LICENSE](./LICENSE) for detais.
 
