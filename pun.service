@@ -3,7 +3,7 @@ Description=Send notifications for package updates in yaourt or pacman
 
 [Service]
 User=root
-ExecStart=/usr/bin/arch-cpun
+ExecStart=/usr/bin/pun
 
 [Install]
-WantedBy=arch-cpun.timer
+WantedBy=pun.timer

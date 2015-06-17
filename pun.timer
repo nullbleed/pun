@@ -1,5 +1,5 @@
 [Unit]
-Description=Runs arch-cpun daily
+Description=Runs pun daily
 
 [Timer]
 OnUnitActiveSec=1d

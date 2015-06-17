@@ -1,24 +1,24 @@
-cpun - cron pacman update notifier
-==================================
+pun - pacman update notifier
+============================
 
 systemd service that sends an email if your system has pending updates.
+
 
 Features
 --------
 
-- small bash-script (for use as a cronjob)
-- aur support with `package-query`
+- small bash-script (may be used as a cronjob)
 - systemd-unit with timer
+- aur support with `package-query`
 
 
 Install
 -------
 
-- To run cpun automatically once every day use the systemd-timer
+- To run pun automatically once a day use the systemd-timer
     
-    `sudo systemctl enable spun.service`
-    `sudo systemctl enable cpun.timer`
-    `sudo systemctl start cpun.timer`
+    `sudo systemctl enable pun.timer`
+    `sudo systemctl start pun.timer`
 
 
 TODO
