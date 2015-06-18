@@ -129,6 +129,7 @@ else
     update_sec=$( date -d "$last_upd" +%s )
 
     if (( $mail_sec < $update_sec || $last_num < $num_pkg )); then
+        # log action
         echo "You have $num_pkg updates. Sending mail..."
         
         # write to temporary mail file
@@ -139,6 +140,9 @@ else
         # save state
         date +"%Y-%m-%d %H:%M" > $LAST_MAIL_SAVE
         echo "$num_pkg" > $LAST_CHECK_SAVE
+    else
+        # log action
+        echo "No new updates since last mail. Do nothing..."
     fi
 fi
 

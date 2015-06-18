@@ -1,5 +1,5 @@
 [Unit]
-Description=Check for package updates and send mail accordingly
+Description=Pacman Update Notifer
 
 [Service]
 Type=simple
