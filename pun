@@ -12,6 +12,27 @@ LAST_MAIL_SAVE=/var/lib/pun/mail_save.dat
 LAST_CHECK_SAVE=/var/lib/pun/check_save.dat
 MAIL_FILE=/var/lib/pun/sendmail.txt
 
+# get input args
+
+args="$@"
+arg_num=$( echo -e "${args}" | wc -l )
+
+for arg in ${args}; do
+    if [ "${arg}" = "-h" ]; then
+        echo -e "Usage: pun [arg1] [arg2]"
+        echo -e "    -p    Use Pacman"
+        echo -e "    -n    Send no mail"
+        echo -e "\nIf package-query is installed, it will be the default package-manager for pun"
+        exit 1
+    fi
+    if [ "${arg}" = "-p" ]; then
+         _set_pacman=1   
+    fi
+    if [ "${arg}" = "-n" ]; then
+        _no_mail=1
+    fi
+done
+
 # check for pacman and package-query
 if [[ -x "$( which pacman 2> /dev/null )" ]]; then
     _pacman="$( which pacman )"
@@ -20,7 +41,7 @@ else
     exit 1
 fi
 
-if [[ -x "$( which package-query 2> /dev/null )" ]]; then
+if [[ -x "$( which package-query 2> /dev/null )" ]] && [[ $_set_pacman -ne 1 ]]; then
     _query="$( which package-query )"
     list_cmd="$_query -QAu"
 else
@@ -30,7 +51,7 @@ fi
 # update package database
 $_pacman -Sy >& /dev/null
 if (( $? != 0 )); then
-    echo "Error: cannot update database"
+    echo "Error: cannot update database (Maybe no sudo?)"
     exit 1
 fi
 
@@ -48,6 +69,15 @@ last_upd="$( grep -e 'starting full system upgrade' /var/log/pacman.log | sed -r
 if (( $num_pkg == 0 )); then
     echo "Last update: $last_upd"
     echo "System is up to date."
+elif (( $_no_mail == 1 )); then
+    # print updates to terminal with -n flag
+    echo "Last update: $last_upd."
+    echo "You have $num_pkg updates:"
+    _old_ifs=$IFS
+    echo -e "$pkg_list" | while IFS= read -r pkg; do
+        echo "    :: $pkg" 
+    done
+    IFS=$_old_ifs
 else
     # should we send a mail?
     if [[ -e "$LAST_MAIL_SAVE" ]]; then
