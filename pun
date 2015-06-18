@@ -24,11 +24,9 @@ for arg in ${args}; do
         echo -e "    -n    Send no mail"
         echo -e "\nIf package-query is installed, it will be the default package-manager for pun"
         exit 1
-    fi
-    if [ "${arg}" = "-p" ]; then
+    elif [ "${arg}" = "-p" ]; then
          _set_pacman=1   
-    fi
-    if [ "${arg}" = "-n" ]; then
+    elif [ "${arg}" = "-n" ]; then
         _no_mail=1
     fi
 done
