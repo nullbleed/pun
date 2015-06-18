@@ -11,9 +11,64 @@
 LAST_MAIL_SAVE=/var/lib/pun/mail_save.dat
 LAST_CHECK_SAVE=/var/lib/pun/check_save.dat
 MAIL_FILE=/var/lib/pun/sendmail.txt
+CONFIG_FILE=/home/neo/Projekte/Bash/pacman-update-notify/sample.conf
 
 _pacman_forced=0
 _no_mail=0
+_conf_cron=0
+#_conf_mail=0
+
+function parse_config() {
+    case ${name} in
+        "package-manager")
+            case ${setting} in
+                "pacman")
+                    _pacman_forced=1
+                    ;;
+                "yaourt")
+                    _pacman_forced=0
+                    ;;
+                *)
+                    echo -e "Error: Wrong package-manager"
+                    ;;
+            esac
+            ;;
+        "output")
+            case ${setting} in
+                "sendmail")
+                    #_conf_mail=0
+                    ;;
+                "mail")
+                    #_conf_mail=1
+                    ;;
+                "nullmailer")
+                    #_conf_mail=2
+                    ;;
+                "none")
+                    _no_mail=1
+                    ;;
+                *)
+                    echo -e "Error: Wrong output option"
+                    ;;
+            esac
+            ;;
+        "cron-support")
+            case ${setting} in
+                "off")
+                    _conf_cron=0
+                    ;;
+                "on")
+                    _conf_cron=1
+                    ;;
+                *)
+                    echo -e "Error: Wrong option in cron-support"
+                    ;;
+            esac
+            ;;
+        *)
+            ;;
+    esac
+}
 
 function print_usage() {
     echo "Usage: $0 [OPTIONS]"
@@ -44,6 +99,16 @@ function print_pkglist() {
     IFS=$_old_ifs
 }
 
+# get config
+conf=$( cat $CONFIG_FILE )
+
+# get particular settings
+for line in $conf; do
+    name=$( echo -e ${line} | sed -re 's/=.*$//' )
+    setting=$( echo -e ${line} | sed -re 's/^.*=//' )
+    parse_config
+done
+
 # parse command line options
 while [[ -n $1 ]]; do
     case $1 in
@@ -53,8 +118,16 @@ while [[ -n $1 ]]; do
         "-p")
             _pacman_forced=1
             shift ;;
-        "-n")
+        "-v")
             _no_mail=1
+            shift ;;
+        "-c")
+            #conf=$( cat $2 )
+            #for line in $conf; do
+            #    name=$( echo -e ${line} | sed -re 's/=.*$//' )
+            #    setting=$( echo -e ${line} | sed -re 's/^.*=//' )
+            #    parse_config
+            #done
             shift ;;
         *)
             echo "Unknown option: $1"
