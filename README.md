@@ -12,6 +12,16 @@ Features
 - aur support with `package-query`
 
 
+Usage
+-----
+```
+Usage: pun [arg1] [arg2]
+    -p    Use pacman
+    -n    Send no mail
+
+If package-query is installed, it will be the default package-manager for pun
+```
+
 Install
 -------
 
@@ -30,10 +40,22 @@ TODO
 - PKGBUILD
 
 
+Errors
+----
+- `Error: cannot update database`
+    - use sudo
+    - check internet-connection
+- `Error: cannot find pacman. Your system is weird!`
+    - do you have pacman or package-query?
+    - wrong distro?
+- `Error: cannot fetch update list`
+    - check internet-connection 
+
+
 License
 -------
 
 (c) 2015 Bernd Busse, Daniel Jankowski  
 The GNU Lesser General Public License 3 (LGPLv3).  
-See [LICENSE](./LICENSE) for detais.
+See [LICENSE](./LICENSE) for details.
 
