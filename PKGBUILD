@@ -23,7 +23,7 @@ pkgver() {
 
 prepare() {
   cd "$_pkgname"
-  sed -e 's_/usr/local/bin_/usr/bin_g' pun.service > pun.service
+  sed -ie 's_/usr/local/bin_/usr/bin_g' pun.service
 }
 
 package() {
