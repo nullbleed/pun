@@ -4,7 +4,7 @@ Description=Check for package updates and send mail accordingly
 [Service]
 Type=simple
 User=root
-ExecStart=/usr/bin/pun
+ExecStart=pun
 
 [Install]
 WantedBy=pun.timer

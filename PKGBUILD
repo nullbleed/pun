@@ -2,14 +2,15 @@
 
 pkgname=pun-git
 _pkgname=pun
-pkgver=v0.2.c0b4de1
-_pkgver=v0.2
+pkgver=v0.3.c0b4de1
+_pkgver=v0.3
 pkgrel=1
 pkgdesc="notifier for system updates (systemd, mail)"
 arch=('any')
 url="https://github.com/nullbleed/pun"
 license=('LGPL3')
 depends=('pacman' 'package-query')
+provides=('pun')
 makedepends=('git')
 source=('git://github.com/nullbleed/pun.git')
 md5sums=('SKIP')

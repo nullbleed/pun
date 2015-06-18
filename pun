@@ -2,7 +2,7 @@
 #
 # pun - Pacman Update Notifier
 # 
-# v0.2 / 2015.06.17
+# v0.3 / 2015.06.18
 #
 # © 2015 Bernd Busse, Daniel Jankowski
 # Licensed under the LGPLv3
@@ -12,24 +12,61 @@ LAST_MAIL_SAVE=/var/lib/pun/mail_save.dat
 LAST_CHECK_SAVE=/var/lib/pun/check_save.dat
 MAIL_FILE=/var/lib/pun/sendmail.txt
 
-# get input args
+_pacman_forced=0
+_no_mail=0
 
-args="$@"
-arg_num=$( echo -e "${args}" | wc -l )
+function print_usage() {
+    echo "Usage: $0 [OPTIONS]"
+}
 
-for arg in ${args}; do
-    if [ "${arg}" = "-h" ]; then
-        echo -e "Usage: pun [arg1] [arg2]"
-        echo -e "    -p    Use Pacman"
-        echo -e "    -n    Send no mail"
-        echo -e "\nIf package-query is installed, it will be the default package-manager for pun"
-        exit 1
-    elif [ "${arg}" = "-p" ]; then
-         _set_pacman=1   
-    elif [ "${arg}" = "-n" ]; then
-        _no_mail=1
-    fi
+function print_version() {
+    echo "pun - Pacman Update Notifier"
+    echo "Version v0.3 - © Bernd Busse, Daniel Jankowski"
+}
+
+function print_help() {
+    print_version
+    echo ""
+    print_usage
+    echo ""
+    echo "    -h      Show this help message"
+    echo "    -p      Force to use pacman"
+    echo "    -n      Send no mail"
+    echo ""
+    echo "If package-query is installed, it will be used by default. Force pacman use with the -p switch."
+}
+
+function print_pkglist() {
+    _old_ifs=$IFS
+    echo -e "$1" | while IFS= read -r pkg; do
+        echo "    :: $pkg"
+    done
+    IFS=$_old_ifs
+}
+
+# parse command line options
+while [[ -n $1 ]]; do
+    case $1 in
+        "-h")
+            print_help
+            exit 0 ;;
+        "-p")
+            _pacman_forced=1
+            shift ;;
+        "-n")
+            _no_mail=1
+            shift ;;
+        *)
+            echo "Unknown option: $1"
+            print_usage
+            exit 1 ;;
+    esac
 done
+
+# create temporary directory if not exists
+if [[ ! -d "/var/lib/pun" ]]; then
+    mkdir /var/lib/pun
+fi
 
 # check for pacman and package-query
 if [[ -x "$( which pacman 2> /dev/null )" ]]; then
@@ -39,7 +76,7 @@ else
     exit 1
 fi
 
-if [[ -x "$( which package-query 2> /dev/null )" ]] && [[ $_set_pacman -ne 1 ]]; then
+if [[ -x "$( which package-query 2> /dev/null )" && $_pacman_forced != 1 ]]; then
     _query="$( which package-query )"
     list_cmd="$_query -QAu"
 else
@@ -64,18 +101,14 @@ num_pkg="$( echo -e "${pkg_list}" | wc -l )"
 last_upd="$( grep -e 'starting full system upgrade' /var/log/pacman.log | sed -re 's/^\[([0-9]{4}-[0-9]{2}-[0-9]{2}\s[0-9]{2}:[0-9]{2})\]\s.*$/\1/g' | tail -n -1 )"
 
 # print message
+echo "Last update: $last_upd"
+
 if (( $num_pkg == 0 )); then
-    echo "Last update: $last_upd"
     echo "System is up to date."
 elif (( $_no_mail == 1 )); then
     # print updates to terminal with -n flag
-    echo "Last update: $last_upd."
     echo "You have $num_pkg updates:"
-    _old_ifs=$IFS
-    echo -e "$pkg_list" | while IFS= read -r pkg; do
-        echo "    :: $pkg" 
-    done
-    IFS=$_old_ifs
+    print_pkglist "$pkg_list"
 else
     # should we send a mail?
     if [[ -e "$LAST_MAIL_SAVE" ]]; then
@@ -96,17 +129,12 @@ else
     update_sec=$( date -d "$last_upd" +%s )
 
     if (( $mail_sec < $update_sec || $last_num < $num_pkg )); then
-        echo "Last update: $last_upd"
         echo "You have $num_pkg updates. Sending mail..."
         
         # write to temporary mail file
         echo "Last update: $last_upd." > $MAIL_FILE
         echo "You have $num_pkg updates:" >> $MAIL_FILE
-        _old_ifs=$IFS
-        echo -e "$pkg_list" | while IFS= read -r pkg; do
-            echo "    :: $pkg" >> $MAIL_FILE
-        done
-        IFS=$_old_ifs
+        print_pkglist "$pkg_list" >> $MAIL_FILE
 
         # save state
         date +"%Y-%m-%d %H:%M" > $LAST_MAIL_SAVE

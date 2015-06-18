@@ -15,41 +15,41 @@ Features
 Usage
 -----
 ```
-Usage: pun [arg1] [arg2]
-    -p    Use pacman
-    -n    Send no mail
+Usage: pun [OPTIONS]
+    -h      Show this help message
+    -p      Force to use pacman
+    -n      Send no mail
 
-If package-query is installed, it will be the default package-manager for pun
+If package-query is installed, it will be used by default. Force pacman use with the -p switch.
 ```
 
 Install
 -------
 
-- To run pun automatically once a day use the systemd-timer
+- Copy `pun` into your `$PATH`, typically `/usr/local/bin`
+- To run pun automatically once every hour use the systemd-timer
     
         sudo systemctl start pun.timer
         sudo systemctl enable pun.timer
+
+
+Errors
+------
+- `Error: cannot update database`
+    - pacman needs root-rights. try with sudo
+    - check internet-connection
+- `Error: cannot find pacman. Your system is weird!`
+    - is pacman in your `$PATH` and executable?
+    - wrong distro?
+- `Error: cannot fetch update list`
+    - check internet-connection 
 
 
 TODO
 ----
 
 - sendmail integration
-- install and usage instructions in README
 - cron example
-- PKGBUILD
-
-
-Errors
-----
-- `Error: cannot update database`
-    - use sudo
-    - check internet-connection
-- `Error: cannot find pacman. Your system is weird!`
-    - do you have pacman or package-query?
-    - wrong distro?
-- `Error: cannot fetch update list`
-    - check internet-connection 
 
 
 License
