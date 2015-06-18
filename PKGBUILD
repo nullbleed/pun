@@ -2,8 +2,7 @@
 
 pkgname=pun-git
 _pkgname=pun
-pkgver=v0.3.f376724
-_pkgver=v0.3
+pkgver=v0.4.f376724
 pkgrel=1
 pkgdesc="notifier for system updates (systemd, mail)"
 arch=('any')
@@ -17,8 +16,7 @@ md5sums=('SKIP')
 
 pkgver() {
   cd "$_pkgname"
-  _gitver="$(git describe --always | sed 's|-|.|g')"
-  echo "$_pkgver.$_gitver"
+  git describe --always | sed 's|-|.|g'
 }
 
 prepare() {
@@ -31,6 +29,7 @@ package() {
   install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$_pkgname/LICENSE"
 
   install -Dm755 pun "$pkgdir/usr/bin/pun"
+  install -Dm6ff pun.conf "$pkgdir/etc/pun.conf"
 
   install -Dm644 pun.service "$pkgdir/usr/lib/systemd/system/pun.service"
   install -Dm644 pun.timer "$pkgdir/usr/lib/systemd/system/pun.timer"

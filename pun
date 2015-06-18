@@ -2,73 +2,17 @@
 #
 # pun - Pacman Update Notifier
 # 
-# v0.3 / 2015.06.18
+# v0.4 / 2015.06.18
 #
 # © 2015 Bernd Busse, Daniel Jankowski
 # Licensed under the LGPLv3
-#
 
 LAST_MAIL_SAVE=/var/lib/pun/mail_save.dat
 LAST_CHECK_SAVE=/var/lib/pun/check_save.dat
+
 MAIL_FILE=/var/lib/pun/sendmail.txt
-CONFIG_FILE=/home/neo/Projekte/Bash/pacman-update-notify/sample.conf
-
-_pacman_forced=0
-_no_mail=0
-_conf_cron=0
-#_conf_mail=0
-
-function parse_config() {
-    case ${name} in
-        "package-manager")
-            case ${setting} in
-                "pacman")
-                    _pacman_forced=1
-                    ;;
-                "yaourt")
-                    _pacman_forced=0
-                    ;;
-                *)
-                    echo -e "Error: Wrong package-manager"
-                    ;;
-            esac
-            ;;
-        "output")
-            case ${setting} in
-                "sendmail")
-                    #_conf_mail=0
-                    ;;
-                "mail")
-                    #_conf_mail=1
-                    ;;
-                "nullmailer")
-                    #_conf_mail=2
-                    ;;
-                "none")
-                    _no_mail=1
-                    ;;
-                *)
-                    echo -e "Error: Wrong output option"
-                    ;;
-            esac
-            ;;
-        "cron-support")
-            case ${setting} in
-                "off")
-                    _conf_cron=0
-                    ;;
-                "on")
-                    _conf_cron=1
-                    ;;
-                *)
-                    echo -e "Error: Wrong option in cron-support"
-                    ;;
-            esac
-            ;;
-        *)
-            ;;
-    esac
-}
+CONFIG_FILE=/etc/pun.conf
+#CONFIG_FILE=./pun.conf
 
 function print_usage() {
     echo "Usage: $0 [OPTIONS]"
@@ -86,55 +30,143 @@ function print_help() {
     echo ""
     echo "    -h      Show this help message"
     echo "    -p      Force to use pacman"
-    echo "    -n      Send no mail"
+    echo "    -q      Quiet mode; suitable for cron mail"
+    echo "    -v      print update list"
+    echo "    -d      dry run; don't send a mail"
     echo ""
     echo "If package-query is installed, it will be used by default. Force pacman use with the -p switch."
 }
 
+function exit_option_err() {
+    echo "Error: Wrong option for '${1}': ${2}"
+    exit 1
+}
+
+function print_log() {
+    if (( $_conf_cron_output == 0 )); then
+        echo "$1"
+    fi
+}
+
+function print_mail() {
+    if (( $_conf_cron_output == 0 )); then
+        echo "$1" >> $MAIL_FILE
+    else
+        echo "$1"
+    fi
+}
+
 function print_pkglist() {
     _old_ifs=$IFS
-    echo -e "$1" | while IFS= read -r pkg; do
-        echo "    :: $pkg"
-    done
+    if (( $_conf_cron_output == 0 )); then
+        if [[ ${1} == "mail" ]]; then
+            echo -e "$2" | while IFS= read -r pkg; do
+                echo "    :: $pkg" >> $MAIL_FILE
+            done
+        elif [[ ${1} == "log" ]]; then
+            echo -e "$2" | while IFS= read -r pkg; do
+                echo "    :: $pkg"
+            done
+        fi
+    elif (( $_conf_cron_output != 0 )) && [[ ${1} == "mail" ]]; then
+        echo -e "$2" | while IFS= read -r pkg; do
+            echo "    :: $pkg"
+        done
+    fi
     IFS=$_old_ifs
 }
 
-# get config
-conf=$( cat $CONFIG_FILE )
+function parse_config() {
+    _old_ifs=$IFS
+    while IFS= read -r line; do
+        if [[ $line == "#"* ]]; then
+            continue
+        elif [[ $line == "" || $line == " "* ]]; then
+            continue
+        fi
 
-# get particular settings
-for line in $conf; do
-    name=$( echo -e ${line} | sed -re 's/=.*$//' )
-    setting=$( echo -e ${line} | sed -re 's/^.*=//' )
-    parse_config
-done
+        _name="$( echo "${line}" | sed -re 's/=.*$//' )"
+        _setting=$( echo "${line}" | sed -re 's/^.*=//' )
+   
+        # check name and setting
+        case ${_name} in
+            "FORCE_PACMAN")
+                case ${_setting} in
+                    "0"|"1")
+                        _conf_pacman_forced=${_conf_pacman_forced:-${_setting}} ;;
+                    *)
+                        exit_option_err ${_name} ${_setting} ;;
+                esac ;;
+            "OUTPUT")
+                case ${_setting} in
+                    "cron")
+                        _conf_cron_output=${_conf_cron_output:-1} ;;
+                    "sendmail")
+                        #_conf_mail=0
+                        ;;
+                    "mail")
+                        #_conf_mail=1
+                        ;;
+                    "nullmailer")
+                        #_conf_mail=2
+                        ;;
+                    "none")
+                        _conf_no_mail=${_conf_no_mail:-1} ;;
+                    *)
+                        exit_option_err ${_name} ${_setting} ;;
+                esac ;;
+            *)
+                echo "ERROR: cannot parse option ${_name}"
+                exit 1 ;;
+        esac
+    done < <(echo "${1}")
+    IFS=$_old_ifs
+}
 
 # parse command line options
 while [[ -n $1 ]]; do
-    case $1 in
+    case ${1} in
         "-h")
             print_help
             exit 0 ;;
         "-p")
-            _pacman_forced=1
+            _conf_pacman_forced=1
             shift ;;
         "-v")
-            _no_mail=1
+            _conf_print_list=1
             shift ;;
-        "-c")
-            #conf=$( cat $2 )
-            #for line in $conf; do
-            #    name=$( echo -e ${line} | sed -re 's/=.*$//' )
-            #    setting=$( echo -e ${line} | sed -re 's/^.*=//' )
-            #    parse_config
-            #done
+        "-d")
+            _conf_no_mail=1
             shift ;;
+        "-q")
+            _conf_cron_output=1
+            shift ;;
+        "-c"|"--config")
+            if [[ -e "${2}" ]]; then
+                CONFIG_FILE="${2}"
+            else
+                print "Can't open config file '${2}'"
+                exit 1
+            fi
+            shift 2 ;;
         *)
             echo "Unknown option: $1"
             print_usage
             exit 1 ;;
     esac
 done
+
+# get config
+if [[ -e "$CONFIG_FILE" ]]; then
+    conf="$( cat $CONFIG_FILE )"
+    parse_config "$conf"
+fi
+
+# set defaults for unset configs
+_conf_pacman_forced=${_conf_pacman_forced:-0}
+_conf_print_list=${_conf_print_list:-0}
+_conf_no_mail=${_conf_no_mail:-0}
+_conf_cron_output=${_conf_cron_output:-0}
 
 # create temporary directory if not exists
 if [[ ! -d "/var/lib/pun" ]]; then
@@ -149,7 +181,7 @@ else
     exit 1
 fi
 
-if [[ -x "$( which package-query 2> /dev/null )" && $_pacman_forced != 1 ]]; then
+if [[ -x "$( which package-query 2> /dev/null )" && $_conf_pacman_forced != 1 ]]; then
     _query="$( which package-query )"
     list_cmd="$_query -QAu"
 else
@@ -174,48 +206,52 @@ num_pkg="$( echo -e "${pkg_list}" | wc -l )"
 last_upd="$( grep -e 'starting full system upgrade' /var/log/pacman.log | sed -re 's/^\[([0-9]{4}-[0-9]{2}-[0-9]{2}\s[0-9]{2}:[0-9]{2})\]\s.*$/\1/g' | tail -n -1 )"
 
 # print message
-echo "Last update: $last_upd"
+print_log "Last update: $last_upd"
 
 if (( $num_pkg == 0 )); then
-    echo "System is up to date."
-elif (( $_no_mail == 1 )); then
-    # print updates to terminal with -n flag
-    echo "You have $num_pkg updates:"
-    print_pkglist "$pkg_list"
-else
-    # should we send a mail?
-    if [[ -e "$LAST_MAIL_SAVE" ]]; then
-        # read last_mail date from file
-        last_mail="$( cat "$LAST_MAIL_SAVE" )"
-        mail_sec=$( date -d "$last_mail" +%s )
+    # system is up to date => don't send a mail
+    print_log "System is up to date."
+elif (( $_conf_no_mail != 0 )); then
+    # dry run, don't send a mail
+    if (( $_conf_print_list == 0)); then
+        print_log "You have $num_pkg updates."
     else
-        mail_sec=0
+        print_log "You have $num_pkg updates:"
+        print_pkglist "log" "$pkg_list"
+    fi
+else
+    # read last_mail date from file
+    if [[ -e "$LAST_MAIL_SAVE" ]]; then
+        mail_sec=$( date -d "$( cat "$LAST_MAIL_SAVE" )" +%s )
     fi
 
+    # read package numer of last check from file
     if [[ -e "$LAST_CHECK_SAVE" ]]; then
-        # read package numer of last check from file
         last_num="$( cat "$LAST_CHECK_SAVE" )"
-    else
-        last_num=0
     fi
 
     update_sec=$( date -d "$last_upd" +%s )
 
-    if (( $mail_sec < $update_sec || $last_num < $num_pkg )); then
-        # log action
-        echo "You have $num_pkg updates. Sending mail..."
+    # should we send a mail?
+    if (( ${mail_sec:-0} < $update_sec || ${last_num:-0} < $num_pkg )); then
+        # mail not yet send OR new updates available
+        print_log "You have $num_pkg updates. Sending mail..."
         
         # write to temporary mail file
-        echo "Last update: $last_upd." > $MAIL_FILE
-        echo "You have $num_pkg updates:" >> $MAIL_FILE
-        print_pkglist "$pkg_list" >> $MAIL_FILE
+        if [[ -e "$MAIL_FILE" ]]; then
+            rm -rf "$MAIL_FILE"
+        fi
+
+        print_mail "Last update: $last_upd."
+        print_mail "You have $num_pkg updates:"
+        print_pkglist "mail" "$pkg_list"
 
         # save state
         date +"%Y-%m-%d %H:%M" > $LAST_MAIL_SAVE
         echo "$num_pkg" > $LAST_CHECK_SAVE
     else
-        # log action
-        echo "No new updates since last mail. Do nothing..."
+        # no new updates
+        print_log "No new updates since last mail."
     fi
 fi
 
