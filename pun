@@ -20,7 +20,7 @@ function print_usage() {
 
 function print_version() {
     echo "pun - Pacman Update Notifier"
-    echo "Version v0.3 - © Bernd Busse, Daniel Jankowski"
+    echo "Version v0.4 - © Bernd Busse, Daniel Jankowski"
 }
 
 function print_help() {
@@ -28,13 +28,14 @@ function print_help() {
     echo ""
     print_usage
     echo ""
-    echo "    -h      Show this help message"
-    echo "    -p      Force to use pacman"
-    echo "    -q      Quiet mode; suitable for cron mail"
-    echo "    -v      print update list"
-    echo "    -d      dry run; don't send a mail"
+    echo "    -h ; --help             Show this help message"
+    echo "    -c ; --config CONFIG    Use config file CONFIG"
+    echo "    -p                      Force to use pacman"
+    echo "    -d                      Send no mail"
+    echo "    -v                      Force output of updates list"
     echo ""
-    echo "If package-query is installed, it will be used by default. Force pacman use with the -p switch."
+    echo "If package-query is installed, it will be used by default."
+    echo "Force use of pacman with the -p switch (no aur)."
 }
 
 function exit_option_err() {
@@ -126,9 +127,17 @@ function parse_config() {
 # parse command line options
 while [[ -n $1 ]]; do
     case ${1} in
-        "-h")
+        "-h"|"--help")
             print_help
             exit 0 ;;
+        "-c"|"--config")
+            if [[ -e "${2}" ]]; then
+                CONFIG_FILE="${2}"
+            else
+                print "Can't open config file '${2}'"
+                exit 1
+            fi
+            shift 2 ;;
         "-p")
             _conf_pacman_forced=1
             shift ;;
@@ -141,14 +150,6 @@ while [[ -n $1 ]]; do
         "-q")
             _conf_cron_output=1
             shift ;;
-        "-c"|"--config")
-            if [[ -e "${2}" ]]; then
-                CONFIG_FILE="${2}"
-            else
-                print "Can't open config file '${2}'"
-                exit 1
-            fi
-            shift 2 ;;
         *)
             echo "Unknown option: $1"
             print_usage

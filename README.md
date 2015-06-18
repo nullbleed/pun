@@ -3,10 +3,10 @@ pun - pacman update notifier
 
 systemd service that sends an email if your system has pending updates.
 
-Sends a mail if
-    
-    - last mail was send before last update
-    - new updates after last mail was send
+Sends a mail if:
+
+- last mail was send before last update
+- there are new updates after last mail was send
 
 
 Features
@@ -22,12 +22,14 @@ Usage
 -----
 ```
 Usage: pun [OPTIONS]
-    -h      Show this help message
-    -p      Force to use pacman
-    -d      Send no mail
-    -v      Force output of updates list
+    -h ; --help             Show this help message
+    -c ; --config CONFIG    Use config file CONFIG
+    -p                      Force to use pacman
+    -d                      Send no mail
+    -v                      Force output of updates list
 
-If package-query is installed, it will be used by default. Force pacman use with the -p switch.
+If package-query is installed, it will be used by default.
+Force use of pacman with the -p switch (no aur).
 ```
 
 Install
@@ -46,6 +48,20 @@ To run pun automatically once every hour use the systemd-timer
 
 If used as a cron job start with the `-q` option or set `OUTPUT=none` in the config file.
 In this mode you may send the output via cron mail.
+
+
+Configuration
+-------------
+
+The default config is in `/etc/pun.conf`. Commandline arguments overwrite this options.
+
+    FORCE_PACMAN=0  # force usage of pacman -> no aur support
+    OUTPUT=none     # output mode: 'none', 'cron'
+
+Output-modes:
+
+- __none__: don't generate any output (no logs, no mail).
+- __cron__: quiet mode for cron mail. Only generates error messages or output if a mail would have been send.
 
 
 Errors
