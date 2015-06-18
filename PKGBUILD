@@ -29,7 +29,7 @@ package() {
   install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$_pkgname/LICENSE"
 
   install -Dm755 pun "$pkgdir/usr/bin/pun"
-  install -Dm6ff pun.conf "$pkgdir/etc/pun.conf"
+  install -Dm644 pun.conf "$pkgdir/etc/pun.conf"
 
   install -Dm644 pun.service "$pkgdir/usr/lib/systemd/system/pun.service"
   install -Dm644 pun.timer "$pkgdir/usr/lib/systemd/system/pun.timer"
