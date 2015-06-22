@@ -58,6 +58,9 @@ Telegram has to be configured as root user at the moment to access the mail-file
 Pun also needs root-rights to use `pacman -Sy`, so telegram-cli runs as root. We try to fix it, so telegram-cli
 doesn't run as root-user.
 
+Also add the path to your key-file(default: /etc/telegram-cli/server.pub) and user-name, who should receive the update
+message to the top of pun in their variables.
+
 Configuration
 -------------
 
