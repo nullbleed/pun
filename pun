@@ -14,6 +14,12 @@ MAIL_FILE=/var/lib/pun/sendmail.txt
 CONFIG_FILE=/etc/pun.conf
 #CONFIG_FILE=./pun.conf
 
+# for telegram(should be read from config...)
+# TODO: add telegram to config file
+_telegram_public_key=''
+_telegram_destination=''
+
+
 function print_usage() {
     echo "Usage: $0 [OPTIONS]"
 }
@@ -100,6 +106,21 @@ function send_mail() {
             echo "Wrong option"
             ;;
     esac
+}
+
+# TODO: get telegram working; bug in telegram-cli with send_text
+function send_telegram() {
+    # write to temporary mail file
+    if [[ -e "$MAIL_FILE" ]]; then
+        rm -rf "$MAIL_FILE"
+    fi
+    
+    echo "Last update: $last_upd." >> $MAIL_FILE
+    echo "You have $num_pkg updates:"  >> $MAIL_FILE
+    echo "mail" "$pkg_list" >> $MAIL_FILE
+   
+    # send via telegram
+    telegram-cli -W -C -D -k ${_telegram_public_key} -e "send ${_telegram_destination} $( cat ${MAIL_FILE} )" 
 }
 
 function parse_config() {
