@@ -10,8 +10,7 @@
 LAST_MAIL_SAVE=/var/lib/pun/mail_save.dat
 LAST_CHECK_SAVE=/var/lib/pun/check_save.dat
 
-#MAIL_FILE=/var/lib/pun/sendmail.txt
-MAIL_FILE=/home/neo/.mail_save.txt
+MAIL_FILE=/var/lib/pun/sendmail.txt
 CONFIG_FILE=/etc/pun.conf
 #CONFIG_FILE=./pun.conf
 
