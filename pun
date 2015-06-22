@@ -2,7 +2,7 @@
 #
 # pun - Pacman Update Notifier
 # 
-# v0.5 / 2015.06.19
+# v0.6 / 2015.06.19
 #
 # © 2015 Bernd Busse, Daniel Jankowski
 # Licensed under the LGPLv3
@@ -18,6 +18,7 @@ CONFIG_FILE=/etc/pun.conf
 # TODO: add telegram to config file
 _telegram_public_key=''
 _telegram_destination=''
+_use_telegram=0
 
 
 function print_usage() {
@@ -26,7 +27,7 @@ function print_usage() {
 
 function print_version() {
     echo "pun - Pacman Update Notifier"
-    echo "Version v0.4 - © Bernd Busse, Daniel Jankowski"
+    echo "Version v0.6 - © Bernd Busse, Daniel Jankowski"
 }
 
 function print_help() {
@@ -39,6 +40,7 @@ function print_help() {
     echo "    -p                      Force to use pacman"
     echo "    -d                      Send no mail"
     echo "    -v                      Force output of updates list"
+    echo "    -t                      Send update-list via telegram"
     echo ""
     echo "If package-query is installed, it will be used by default."
     echo "Force use of pacman with the -p switch (no aur)."
@@ -197,6 +199,9 @@ while [[ -n $1 ]]; do
         "-q")
             _conf_cron_output=1
             shift ;;
+        "-t")
+            _use_telegram=1
+            shift ;;
         *)
             echo "Unknown option: $1"
             print_usage
@@ -286,8 +291,11 @@ else
         print_log "You have $num_pkg updates. Sending mail..."
         
         # send mail
-        #send_mail
-        send_telegram
+        if [[ $_use_telegram -eq 0 ]]; then
+            send_mail
+        else
+            send_telegram
+        fi
 
         date +"%Y-%m-%d %H:%M" > $LAST_MAIL_SAVE
         echo "$num_pkg" > $LAST_CHECK_SAVE

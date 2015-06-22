@@ -16,6 +16,7 @@ Features
 - systemd-unit with timer
 - cron-mail mode (less output)
 - aur support with `package-query`
+- send update-list via [telegram-cli](https://github.com/vysheng/tg) (BETA)
 
 
 Usage
@@ -27,6 +28,7 @@ Usage: pun [OPTIONS]
     -p                      Force to use pacman
     -d                      Send no mail
     -v                      Force output of updates list
+    -t                      Send update-list via telegram
 
 If package-query is installed, it will be used by default.
 Force use of pacman with the -p switch (no aur).
@@ -49,6 +51,12 @@ To run pun automatically once every hour use the systemd-timer
 If used as a cron job start with the `-q` option or set `OUTPUT=none` in the config file.
 In this mode you may send the output via cron mail.
 
+### Telegram
+
+For use with Telegram, install [telegram-cli](https://github.com/vysheng/tg)
+Telegram has to be configured as root user at the moment to access the mail-file(/var/lib/pun/mail_save.txt).
+Pun also needs root-rights to use `pacman -Sy`, so telegram-cli runs as root. We try to fix it, so telegram-cli
+doesn't run as root-user.
 
 Configuration
 -------------
@@ -62,6 +70,7 @@ Output-modes:
 
 - __none__: don't generate any output (no logs, no mail).
 - __cron__: quiet mode for cron mail. Only generates error messages or output if a mail would have been send.
+- __telegram__: don't generate output. Sends update-list via Telegram
 
 
 Errors
