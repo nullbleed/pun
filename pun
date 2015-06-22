@@ -77,6 +77,31 @@ function print_pkglist() {
     IFS=$_old_ifs
 }
 
+function send_mail() {
+    # write to temporary mail file
+    if [[ -e "$MAIL_FILE" ]]; then
+        rm -rf "$MAIL_FILE"
+    fi
+    
+    echo "Last update: $last_upd." >> $MAIL_FILE
+    echo "You have $num_pkg updates:"  >> $MAIL_FILE
+    echo "mail" "$pkg_list" >> $MAIL_FILE
+ 
+    case "${_conf_mail}" in
+        "1")
+            # send mail
+            mail -s "$( date +"%Y-%m-%d %H:%M" ) - $( hostname ) has ${num_pkg} new Update(s)" $MAIL_ADRESS < "${MAIL_FILE}"
+            ;;
+        "2")
+            # send mail
+            mail -s "$( date +"%Y-%m-%d %H:%M" ) - $( hostname ) has ${num_pkg} new Update(s)" $MAIL_ADRESS < "${MAIL_FILE}"
+            ;;
+        *)
+            echo "Wrong option"
+            ;;
+    esac
+}
+
 function parse_config() {
     _old_ifs=$IFS
     while IFS= read -r line; do
@@ -123,6 +148,7 @@ function parse_config() {
     done < <(echo "${1}")
     IFS=$_old_ifs
 }
+
 
 # parse command line options
 while [[ -n $1 ]]; do
@@ -238,16 +264,9 @@ else
         # mail not yet send OR new updates available
         print_log "You have $num_pkg updates. Sending mail..."
         
-        # write to temporary mail file
-        if [[ -e "$MAIL_FILE" ]]; then
-            rm -rf "$MAIL_FILE"
-        fi
+        # send mail
+        send_mail
 
-        print_mail "Last update: $last_upd."
-        print_mail "You have $num_pkg updates:"
-        print_pkglist "mail" "$pkg_list"
-
-        # save state
         date +"%Y-%m-%d %H:%M" > $LAST_MAIL_SAVE
         echo "$num_pkg" > $LAST_CHECK_SAVE
     else
