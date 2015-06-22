@@ -2,7 +2,7 @@
 #
 # pun - Pacman Update Notifier
 # 
-# v0.4 / 2015.06.18
+# v0.5 / 2015.06.19
 #
 # © 2015 Bernd Busse, Daniel Jankowski
 # Licensed under the LGPLv3
@@ -112,12 +112,12 @@ function parse_config() {
         fi
 
         _name="$( echo "${line}" | sed -re 's/=.*$//' )"
-        _setting=$( echo "${line}" | sed -re 's/^.*=//' )
+        _setting=$( echo "${line}" | sed -re 's/^.*=(\S+)\s.*$/\1/g' )
    
         # check name and setting
         case ${_name} in
             "FORCE_PACMAN")
-                case ${_setting} in
+                case "${_setting}" in
                     "0"|"1")
                         _conf_pacman_forced=${_conf_pacman_forced:-${_setting}} ;;
                     *)

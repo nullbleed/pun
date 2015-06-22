@@ -41,8 +41,8 @@ Install
 
 To run pun automatically once every hour use the systemd-timer
     
-    sudo systemctl start pun.timer
-    sudo systemctl enable pun.timer
+    $ sudo systemctl start pun.timer
+    $ sudo systemctl enable pun.timer
 
 ### cron
 
