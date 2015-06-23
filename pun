@@ -12,7 +12,7 @@ LAST_CHECK_SAVE=/var/lib/pun/check_save.dat
 
 MAIL_FILE=/var/lib/pun/sendmail.txt
 CONFIG_FILE=/etc/pun.conf
-#CONFIG_FILE=./pun.conf
+MAIL_ADDR="${USER}@localhost"
 
 function print_usage() {
     echo "Usage: $0 [OPTIONS]"
@@ -44,36 +44,20 @@ function exit_option_err() {
 }
 
 function print_log() {
-    if (( $_conf_cron_output == 0 )); then
+    if [[ $_conf_output_mode != "none" && $_conf_output_mode != "cron" ]]; then
         echo "$1"
     fi
 }
 
 function print_mail() {
-    if (( $_conf_cron_output == 0 )); then
-        echo "$1" >> $MAIL_FILE
-    else
-        echo "$1"
-    fi
+    echo "$1" >> ${MAIL_FILE}
 }
 
 function print_pkglist() {
     _old_ifs=$IFS
-    if (( $_conf_cron_output == 0 )); then
-        if [[ ${1} == "mail" ]]; then
-            echo -e "$2" | while IFS= read -r pkg; do
-                echo "    :: $pkg" >> $MAIL_FILE
-            done
-        elif [[ ${1} == "log" ]]; then
-            echo -e "$2" | while IFS= read -r pkg; do
-                echo "    :: $pkg"
-            done
-        fi
-    elif (( $_conf_cron_output != 0 )) && [[ ${1} == "mail" ]]; then
-        echo -e "$2" | while IFS= read -r pkg; do
-            echo "    :: $pkg"
-        done
-    fi
+    while IFS= read -r pkg; do
+        echo "    :: $pkg"
+    done < <(echo -e "${1}")
     IFS=$_old_ifs
 }
 
@@ -84,22 +68,17 @@ function send_mail() {
     fi
     
     echo "Last update: $last_upd." >> $MAIL_FILE
-    echo "You have $num_pkg updates:"  >> $MAIL_FILE
-    echo "mail" "$pkg_list" >> $MAIL_FILE
+    echo "You have $num_pkg updates:" >> $MAIL_FILE
+    print_pkglist "$pkg_list" >> $MAIL_FILE
  
-    case "${_conf_mail}" in
-        "1")
-            # send mail
-            mail -s "$( date +"%Y-%m-%d %H:%M" ) - $( hostname ) has ${num_pkg} new Update(s)" $MAIL_ADRESS < "${MAIL_FILE}"
-            ;;
-        "2")
-            # send mail
-            mail -s "$( date +"%Y-%m-%d %H:%M" ) - $( hostname ) has ${num_pkg} new Update(s)" $MAIL_ADRESS < "${MAIL_FILE}"
-            ;;
-        *)
-            echo "Wrong option"
-            ;;
-    esac
+    if (( $_conf_send_mail == 1 )); then
+        # send mail
+        mail -s "$( date +"%Y-%m-%d %H:%M" ) - $( hostname ) has ${num_pkg} new Update(s)" $MAIL_ADDR < "${MAIL_FILE}"
+    fi
+    if [[ $_conf_output_mode == "cron" ]]; then
+        # cron mode output
+        cat ${MAIL_FILE}
+    fi
 }
 
 function parse_config() {
@@ -125,19 +104,15 @@ function parse_config() {
                 esac ;;
             "OUTPUT")
                 case ${_setting} in
-                    "cron")
-                        _conf_cron_output=${_conf_cron_output:-1} ;;
-                    "sendmail")
-                        #_conf_mail=0
-                        ;;
-                    "mail")
-                        #_conf_mail=1
-                        ;;
-                    "nullmailer")
-                        #_conf_mail=2
-                        ;;
-                    "none")
-                        _conf_no_mail=${_conf_no_mail:-1} ;;
+                    "cron"|"verbose"|"none"|"log")
+                        _conf_output_mode=${_conf_output_mode:-${_setting}} ;;
+                    *)
+                        exit_option_err ${_name} ${_setting} ;;
+                esac ;;
+            "MAIL")
+                case "${_setting}" in
+                    "0"|"1")
+                        _conf_send_mail=${_conf_send_mail:-${_setting}} ;;
                     *)
                         exit_option_err ${_name} ${_setting} ;;
                 esac ;;
@@ -168,13 +143,16 @@ while [[ -n $1 ]]; do
             _conf_pacman_forced=1
             shift ;;
         "-v")
-            _conf_print_list=1
+            _conf_output_mode="verbose"
             shift ;;
         "-d")
-            _conf_no_mail=1
+            _conf_send_mail=0
+            shift ;;
+        "-c")
+            _conf_output_mode="cron"
             shift ;;
         "-q")
-            _conf_cron_output=1
+            _conf_output_mode="none"
             shift ;;
         *)
             echo "Unknown option: $1"
@@ -191,9 +169,9 @@ fi
 
 # set defaults for unset configs
 _conf_pacman_forced=${_conf_pacman_forced:-0}
-_conf_print_list=${_conf_print_list:-0}
-_conf_no_mail=${_conf_no_mail:-0}
-_conf_cron_output=${_conf_cron_output:-0}
+_conf_output_mode=${_conf_output_mode:-"log"}
+_conf_send_mail=${_conf_send_mail:-1}
+_conf_send_telegram=${_conf_send_telegram:-1}
 
 # create temporary directory if not exists
 if [[ ! -d "/var/lib/pun" ]]; then
@@ -208,7 +186,7 @@ else
     exit 1
 fi
 
-if [[ -x "$( which package-query 2> /dev/null )" && $_conf_pacman_forced != 1 ]]; then
+if [[ -x "$( which package-query 2> /dev/null )" ]] && (( $_conf_pacman_forced != 1 )); then
     _query="$( which package-query )"
     list_cmd="$_query -QAu"
 else
@@ -218,7 +196,7 @@ fi
 # update package database
 $_pacman -Sy >& /dev/null
 if (( $? != 0 )); then
-    echo "Error: cannot update database (Maybe no sudo?)"
+    echo "Error: cannot update database (try with sudo?)"
     exit 1
 fi
 
@@ -238,40 +216,40 @@ print_log "Last update: $last_upd"
 if (( $num_pkg == 0 )); then
     # system is up to date => don't send a mail
     print_log "System is up to date."
-elif (( $_conf_no_mail != 0 )); then
-    # dry run, don't send a mail
-    if (( $_conf_print_list == 0)); then
-        print_log "You have $num_pkg updates."
-    else
-        print_log "You have $num_pkg updates:"
-        print_pkglist "log" "$pkg_list"
-    fi
 else
-    # read last_mail date from file
-    if [[ -e "$LAST_MAIL_SAVE" ]]; then
-        mail_sec=$( date -d "$( cat "$LAST_MAIL_SAVE" )" +%s )
-    fi
-
-    # read package numer of last check from file
-    if [[ -e "$LAST_CHECK_SAVE" ]]; then
-        last_num="$( cat "$LAST_CHECK_SAVE" )"
-    fi
-
-    update_sec=$( date -d "$last_upd" +%s )
-
-    # should we send a mail?
-    if (( ${mail_sec:-0} < $update_sec || ${last_num:-0} < $num_pkg )); then
-        # mail not yet send OR new updates available
-        print_log "You have $num_pkg updates. Sending mail..."
-        
-        # send mail
-        send_mail
-
-        date +"%Y-%m-%d %H:%M" > $LAST_MAIL_SAVE
-        echo "$num_pkg" > $LAST_CHECK_SAVE
+    if [[ $_conf_output_mode == "verbose" ]]; then
+        print_log "You have $num_pkg updates:"
+        print_pkglist "$pkg_list"
     else
-        # no new updates
-        print_log "No new updates since last mail."
+        print_log "You have $num_pkg updates."
+    fi
+
+    if (( $_conf_send_mail == 1 || $_conf_send_telegram == 1 )) || [[ $_conf_output_mode == "cron" ]]; then
+        # read last_mail date from file
+        if [[ -e "$LAST_MAIL_SAVE" ]]; then
+            mail_sec=$( date -d "$( cat "$LAST_MAIL_SAVE" )" +%s )
+        fi
+
+        # read package numer of last check from file
+        if [[ -e "$LAST_CHECK_SAVE" ]]; then
+            last_num="$( cat "$LAST_CHECK_SAVE" )"
+        fi
+
+        update_sec=$( date -d "$last_upd" +%s )
+
+        # should we send a mail?
+        if (( ${mail_sec:-0} < $update_sec || ${last_num:-0} < $num_pkg )); then
+            # mail not yet send OR new updates available
+            print_log "Sending mail..."
+            
+            # send mail
+            send_mail
+
+            date +"%Y-%m-%d %H:%M" > $LAST_MAIL_SAVE
+            echo "$num_pkg" > $LAST_CHECK_SAVE
+        else
+            # no new updates
+            print_log "No new updates since last mail."
+        fi
     fi
 fi
-
