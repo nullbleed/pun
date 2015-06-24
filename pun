@@ -2,7 +2,7 @@
 #
 # pun - Pacman Update Notifier
 # 
-# v0.6 / 2015.06.19
+# v0.6 / 2015.06.24
 #
 # © 2015 Bernd Busse, Daniel Jankowski
 # Licensed under the LGPLv3
@@ -12,13 +12,6 @@ LAST_CHECK_SAVE=/var/lib/pun/check_save.dat
 
 MAIL_FILE=/var/lib/pun/sendmail.txt
 CONFIG_FILE=/etc/pun.conf
-MAIL_ADDR="${USER}@localhost"
-
-# for telegram(should be read from config...)
-# TODO: add telegram to config file
-_telegram_public_key=''
-_telegram_destination=''
-_use_telegram=0
 
 
 function print_usage() {
@@ -35,20 +28,33 @@ function print_help() {
     echo ""
     print_usage
     echo ""
-    echo "    -h ; --help             Show this help message"
-    echo "    -c ; --config CONFIG    Use config file CONFIG"
-    echo "    -p                      Force to use pacman"
-    echo "    -d                      Send no mail"
-    echo "    -v                      Force output of updates list"
-    echo "    -t                      Send update-list via telegram"
+    echo "    -h ; --help                 Show this help message"
+    echo "    -c ; --config CONFIG        Use config file CONFIG"
+    echo "    -p                          Force to use pacman"
+    echo "    -d                          Dry run: Send no mail, telegram, etc."
+    echo "    -v                          Force output of updates list"
+    echo "         --cron                 Only print if a mail would be send (cron mail compatible)"
+    echo "    -q ; --quiet                Quiet mode, only errors are printed"
+    echo "    -m ; --mail ADDRESS         Send update-list via mail to ADDRESS"
+    echo "    -t ; --telegram CONTACT     Send update-list via telegram to CONTACT"
+    echo "         --key KEYFILE          Public-Key for local telegram client"
     echo ""
     echo "If package-query is installed, it will be used by default."
     echo "Force use of pacman with the -p switch (no aur)."
 }
 
 function exit_option_err() {
-    echo "Error: Wrong option for '${1}': ${2}"
+    echo "Error: Wrong option for '${1}': ${2}" >&2
     exit 1
+}
+
+function check_err() {
+    echo ${1}
+    errmsg="$( eval "${1}" 2>&1 > /dev/null )"
+    if (( $? != 0 )); then
+        echo "Error:${2:+ ${2}:}$( echo ${errmsg} | cut -d':' -f 2 )" >&2
+        exit 1
+    fi
 }
 
 function print_log() {
@@ -81,27 +87,16 @@ function send_mail() {
  
     if (( $_conf_send_mail == 1 )); then
         # send mail
-        mail -s "$( date +"%Y-%m-%d %H:%M" ) - $( hostname ) has ${num_pkg} new Update(s)" $MAIL_ADDR < "${MAIL_FILE}"
+        check_err "mail -s '$( date +"%Y-%m-%d %H:%M" ) - $( hostname ) has ${num_pkg} new Update(s)' \"$_conf_mail_address\" < \"${MAIL_FILE}\"" "cannot send mail"
+    fi
+    if (( $_conf_send_telegram == 1 )); then
+        # send via telegram
+        check_err "telegram-cli -W -C -D -k \"${_conf_telegram_pubkey}\" -e \"send_text ${_conf_telegram_contact} ${MAIL_FILE}\"" "cannot send message"
     fi
     if [[ $_conf_output_mode == "cron" ]]; then
         # cron mode output
         cat ${MAIL_FILE}
     fi
-}
-
-# TODO: get telegram working; bug in telegram-cli with send_text
-function send_telegram() {
-    # write to temporary mail file
-    if [[ -e "$MAIL_FILE" ]]; then
-        rm -rf "$MAIL_FILE"
-    fi
-    
-    echo "Last update: $last_upd." >> $MAIL_FILE
-    echo "You have $num_pkg updates:"  >> $MAIL_FILE
-    echo "mail" "$pkg_list" >> $MAIL_FILE
-   
-    # send via telegram
-    telegram-cli -W -C -D -k ${_telegram_public_key} -e "send_text ${_telegram_destination} ${MAIL_FILE}" 
 }
 
 function parse_config() {
@@ -114,7 +109,7 @@ function parse_config() {
         fi
 
         _name="$( echo "${line}" | sed -re 's/=.*$//' )"
-        _setting=$( echo "${line}" | sed -re 's/^.*=(\S+)\s.*$/\1/g' )
+        _setting=$( echo "${line}" | sed -re 's/^.*=(\S+).*$/\1/g' )
    
         # check name and setting
         case ${_name} in
@@ -132,15 +127,40 @@ function parse_config() {
                     *)
                         exit_option_err ${_name} ${_setting} ;;
                 esac ;;
-            "MAIL")
+            "USE_MAIL")
                 case "${_setting}" in
                     "0"|"1")
                         _conf_send_mail=${_conf_send_mail:-${_setting}} ;;
                     *)
                         exit_option_err ${_name} ${_setting} ;;
                 esac ;;
+            "MAIL_ADDRESS")
+                if [[ -n ${_setting} ]]; then
+                    _conf_mail_address="${_setting}"
+                else
+                    exit_option_err ${_name} ${_setting}
+                fi ;;
+            "USE_TELEGRAM")
+                case "${_setting}" in
+                    "0"|"1")
+                        _conf_send_telegram=${_conf_send_telegram:-${_setting}} ;;
+                    *)
+                        exit_option_err ${_name} ${_setting} ;;
+                esac ;;
+            "TELEGRAM_CONTACT")
+                if [[ -n ${_setting} ]]; then
+                    _conf_telegram_contact="${_setting}"
+                else
+                    exit_option_err ${_name} ${_setting}
+                fi ;;
+            "TELEGRAM_PUBKEY")
+                if [[ -e ${_setting} ]]; then
+                    _conf_telegram_pubkey="${_setting}"
+                else
+                    exit_option_err ${_name} ${_setting}
+                fi ;;
             *)
-                echo "ERROR: cannot parse option ${_name}"
+                echo "ERROR: cannot parse option ${_name}" >&2
                 exit 1 ;;
         esac
     done < <(echo "${1}")
@@ -158,31 +178,55 @@ while [[ -n $1 ]]; do
             if [[ -e "${2}" ]]; then
                 CONFIG_FILE="${2}"
             else
-                print "Can't open config file '${2}'"
+                echo "Can't open config file '${2}'" >&2
                 exit 1
             fi
             shift 2 ;;
         "-p")
             _conf_pacman_forced=1
             shift ;;
+        "-q"|"--quiet")
+            _conf_output_mode="none"
+            shift ;;
         "-v")
             _conf_output_mode="verbose"
             shift ;;
-        "-d")
-            _conf_send_mail=0
-            shift ;;
-        "-c")
+        "--cron")
             _conf_output_mode="cron"
             shift ;;
-        "-q")
-            _conf_output_mode="none"
+        "-d")
+            _conf_send_mail=0
+            _conf_send_telegram=0
             shift ;;
+        "-m")
+            _conf_send_mail=1
+            if [[ -n "${2}" ]]; then
+                _conf_mail_address="${2}"
+            else
+                echo "Missing destination mail address" >&2
+                exit 1
+            fi
+            shift 2 ;;
         "-t")
-            _use_telegram=1
-            shift ;;
+            _conf_send_telegram=1
+            if [[ -n "${2}" ]]; then
+                _conf_telegram_contact="${2}"
+            else
+                echo "Missing destination telegram contact" >&2
+                exit 1
+            fi
+            shift 2 ;;
+        "--key")
+            if [[ -e "${2}" ]]; then
+                _conf_telegram_pubkey="${2}"
+            else
+                echo "Cannot stat telegram keyfile: ${2}" >&2
+                exit 1
+            fi
+            shift 2 ;;
         *)
-            echo "Unknown option: $1"
-            print_usage
+            echo "Unknown option: $1" >$2
+            print_usage >&2
             exit 1 ;;
     esac
 done
@@ -194,10 +238,13 @@ if [[ -e "$CONFIG_FILE" ]]; then
 fi
 
 # set defaults for unset configs
-_conf_pacman_forced=${_conf_pacman_forced:-0}
-_conf_output_mode=${_conf_output_mode:-"log"}
-_conf_send_mail=${_conf_send_mail:-1}
-_conf_send_telegram=${_conf_send_telegram:-1}
+_conf_pacman_forced=${_conf_pacman_forced:=0}
+_conf_output_mode=${_conf_output_mode:="log"}
+_conf_send_mail=${_conf_send_mail:=1}
+_conf_mail_address=${_conf_mail_address:="root@localhost"}
+_conf_send_telegram=${_conf_send_telegram:=0}
+_conf_telegram_contact=${_conf_telegram_contact}
+_conf_telegram_pubkey=${_conf_telegram_pubkey}
 
 # create temporary directory if not exists
 if [[ ! -d "/var/lib/pun" ]]; then
@@ -208,7 +255,7 @@ fi
 if [[ -x "$( which pacman 2> /dev/null )" ]]; then
     _pacman="$( which pacman )"
 else
-    echo "Error: cannot find pacman. Your system is weird!"
+    echo "Error: cannot find pacman. Your system is weird!" >&2
     exit 1
 fi
 
@@ -219,12 +266,20 @@ else
     list_cmd="$_pacman --color never -Qu"
 fi
 
-# update package database
-$_pacman -Sy >& /dev/null
-if (( $? != 0 )); then
-    echo "Error: cannot update database (try with sudo?)"
+# check for mail and/or telegram-cli
+if [[ ! -x "$( which mail 2> /dev/null )" ]] && (( $_conf_send_mail == 1 )); then
+    echo -e "Error: cannot find executable 'mail'!\nCannot send mail, abbort..." >&2
     exit 1
 fi
+
+if [[ ! -x "$( which telegram-cli 2> /dev/null )" ]] && (( $_conf_send_telegram == 1 )); then
+    echo -e "Error: cannot find executable 'telegram-cli'!\nCannot send telegram message, abbort..." >&2
+    exit 1
+fi
+
+
+# update package database
+check_err "$_pacman -Sy" "cannot update database"
 
 # get updatelist
 pkg_list="$( $list_cmd 2> /dev/null )"

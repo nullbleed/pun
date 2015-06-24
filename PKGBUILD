@@ -2,13 +2,16 @@
 
 pkgname=pun-git
 _pkgname=pun
-pkgver=v0.5
+pkgver=v0.6
 pkgrel=1
 pkgdesc="notifier for system updates (systemd, mail)"
 arch=('any')
 url="https://github.com/nullbleed/pun"
 license=('LGPL3')
 depends=('pacman' 'package-query')
+optdepends=('mail: sendmail support (provides mail)'
+            'mutt: sendmail support (provides mail)'
+            'telegram-cli: telegram notification integration')
 provides=('pun')
 makedepends=('git')
 install='pun.install'
