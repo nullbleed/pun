@@ -18,7 +18,7 @@ install='pun.install'
 source=('git://github.com/nullbleed/pun.git'
         'pun.install')
 sha256sums=('SKIP'
-            'c1901a87814a882a98008a7cbff88b3a4309e3c87ddf783731192e7cdc6a9c69')
+            '5563b3fe1cc6667920c9d8fbb0e130b347fd7aeb82e739bffb549992d9ec24f2')
 
 pkgver() {
   cd "$_pkgname"
