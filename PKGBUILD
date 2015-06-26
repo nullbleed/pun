@@ -2,7 +2,7 @@
 
 pkgname=pun-git
 _pkgname=pun
-pkgver=v0.6.1.gd786e91
+pkgver=v0.6.2.g6e78fa5
 pkgrel=1
 pkgdesc="notifier for system updates (systemd, mail)"
 arch=('any')
@@ -36,7 +36,7 @@ package() {
   install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$_pkgname/LICENSE"
 
   install -Dm755 pun "$pkgdir/usr/bin/pun"
-  install -Dm755 pun-search-telegram-id "$pkgdir/usr/bin/pun-search-telegram-id"
+  install -Dm755 pun-search-telegram-id.py "$pkgdir/usr/bin/pun-search-telegram-id"
   install -Dm644 pun.conf "$pkgdir/etc/pun.conf"
 
   install -Dm644 pun.service "$pkgdir/usr/lib/systemd/system/pun.service"
