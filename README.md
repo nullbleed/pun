@@ -61,7 +61,7 @@ In this mode you may send the output via cron mail.
 To send telegram messages pun uses an official Telegram Bot. For this Bot to work
 you need to provide your telegram user id.
 You may get your telegram user id with the provided `pun-search-telegram-id` script,
-if you've sent a message to the [NotifyBot](https://telegram.me/notifier_bot).
+after you've sent a message to the [NotifyBot](https://telegram.me/notifier_bot).
 
 
 Configuration
