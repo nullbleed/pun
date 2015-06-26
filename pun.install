@@ -3,6 +3,6 @@ post_install() {
     echo "To run pun automatically once every hour use the systemd-timer:"
     echo "    $ sudo systemctl start pun.timer"
     echo "    $ sudo systemctl enable pun.timer"
-    echo "If you want mail and/or telegram support edit the corresponding config options in /etc/pun.conf"
+    echo "If you want to use the telegram bot notifications, set your userid in the configfile"
 }
 

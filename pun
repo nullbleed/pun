@@ -2,7 +2,7 @@
 #
 # pun - Pacman Update Notifier
 # 
-# v0.6 / 2015.06.24
+# v0.7 / 2015.06.24
 #
 # © 2015 Bernd Busse, Daniel Jankowski
 # Licensed under the LGPLv3
@@ -28,16 +28,16 @@ function print_help() {
     echo ""
     print_usage
     echo ""
-    echo "    -h ; --help                 Show this help message"
-    echo "    -c ; --config CONFIG        Use config file CONFIG"
-    echo "    -p                          Force to use pacman"
-    echo "    -d                          Dry run: Send no mail, telegram, etc."
-    echo "    -v                          Force output of updates list"
-    echo "         --cron                 Only print if a mail would be send (cron mail compatible)"
-    echo "    -q ; --quiet                Quiet mode, only errors are printed"
-    echo "    -m ; --mail ADDRESS         Send update-list via mail to ADDRESS"
-    echo "    -t ; --telegram CONTACT     Send update-list via telegram to CONTACT"
-    echo "         --key KEYFILE          Public-Key for local telegram client"
+    echo "    -h ; --help                       Show this help message"
+    echo "    -c ; --config CONFIG              Use config file CONFIG"
+    echo "    -p                                Force to use pacman"
+    echo "    -d                                Dry run: Send no mail, telegram, etc."
+    echo "    -v                                Force output of updates list"
+    echo "         --cron                       Only print if a mail would be send (cron mail compatible)"
+    echo "    -q ; --quiet                      Quiet mode, only errors are printed"
+    echo "    -m ; --mail ADDRESS               Send update-list via mail to ADDRESS"
+    echo "    -t ; --telegram ID                Send update-list via telegram to contact ID"
+    echo "         --telegram-token TOKEN       API-Token for the telegram telegram bot"
     echo ""
     echo "If package-query is installed, it will be used by default."
     echo "Force use of pacman with the -p switch (no aur)."
@@ -49,12 +49,35 @@ function exit_option_err() {
 }
 
 function check_err() {
-    echo ${1}
-    errmsg="$( eval "${1}" 2>&1 > /dev/null )"
-    if (( $? != 0 )); then
-        echo "Error:${2:+ ${2}:}$( echo ${errmsg} | cut -d':' -f 2 )" >&2
+    unset t_std t_err t_ret
+    eval "$( eval "${1}" 2> >(t_err=$( cat ); typeset -p t_err) > >(t_std=$( cat ); typeset -p t_std); t_ret=$?; typeset -p t_ret )"
+
+    if (( $t_ret != 0 )); then
+        echo "Error:${2:+ ${2}:} $( echo -e "${t_err}" )" >&2
         exit 1
+    elif [[ "${1}" == *"mail"* ]]; then
+        if (( $( echo "$t_err" | grep -e 'executable not found' 2>&1 > /dev/null; echo $? ) == 0 )); then
+            echo "Error:${2:+ ${2}:} $( echo "$t_err" | head -n 1 )" >&2
+            exit 1
+        fi
+    elif [[ "${1}" == *"package-query "* ]]; then
+        if (( $( echo "$t_err" | grep -e 'curl error: ' 2>&1 > /dev/null; echo $? ) == 0 )); then
+            echo "Error:${2:+ ${2}}" >&2
+            exit 1
+        fi
+    elif [[ "${1}" == *"curl "* ]]; then
+        if (( $( echo "$t_std" | grep -e '\<html\>' 2>&1 > /dev/null; echo $? ) == 0 )); then
+            echo "Error: Telegram API: 403 Forbidden (token seems to be wrong)" >&2
+            exit 1
+        elif (( $( echo "$t_std" | grep -e '"ok":false' 2>&1 > /dev/null; echo $? ) == 0 )); then
+            code="$( echo "$t_std" | sed -re 's/^.*"error_code":([0-9]+).*$/\1/g' )"
+            description="$( echo "$t_std" | sed -re 's/^.*"description":"(.*)".*$/\1/g' )"
+            echo "Error: Telegram API: (${code}) ${description}" >&2
+            exit 1
+        fi
     fi
+
+    echo "$t_std"
 }
 
 function print_log() {
@@ -82,16 +105,16 @@ function send_mail() {
     fi
     
     echo "Last update: $last_upd." >> $MAIL_FILE
-    echo "You have $num_pkg updates:" >> $MAIL_FILE
+    echo "You have $num_pkg updates on host '$( hostname )':" >> $MAIL_FILE
     print_pkglist "$pkg_list" >> $MAIL_FILE
  
     if (( $_conf_send_mail == 1 )); then
         # send mail
-        check_err "mail -s '$( date +"%Y-%m-%d %H:%M" ) - $( hostname ) has ${num_pkg} new Update(s)' \"$_conf_mail_address\" < \"${MAIL_FILE}\"" "cannot send mail"
+        check_err "mail -s '$( date +"%Y-%m-%d %H:%M" ) - $( hostname ) has ${num_pkg} new Update(s)' \"$_conf_mail_address\" < \"${MAIL_FILE}\"" "cannot send mail" > /dev/null
     fi
     if (( $_conf_send_telegram == 1 )); then
         # send via telegram
-        check_err "telegram-cli -W -C -D -k \"${_conf_telegram_pubkey}\" -e \"send_text ${_conf_telegram_contact} ${MAIL_FILE}\"" "cannot send message"
+        check_err "curl -Ss --data \"chat_id=${_conf_telegram_contact}&text=$(cat ${MAIL_FILE})\" \"https://api.telegram.org/bot${_conf_telegram_token}/sendMessage\"" > /dev/null
     fi
     if [[ $_conf_output_mode == "cron" ]]; then
         # cron mode output
@@ -136,7 +159,7 @@ function parse_config() {
                 esac ;;
             "MAIL_ADDRESS")
                 if [[ -n ${_setting} ]]; then
-                    _conf_mail_address="${_setting}"
+                    _conf_mail_address="${_conf_mail_address:-${_setting}}"
                 else
                     exit_option_err ${_name} ${_setting}
                 fi ;;
@@ -149,13 +172,13 @@ function parse_config() {
                 esac ;;
             "TELEGRAM_CONTACT")
                 if [[ -n ${_setting} ]]; then
-                    _conf_telegram_contact="${_setting}"
+                    _conf_telegram_contact="${_conf_telegram_contact:-${_setting}}"
                 else
                     exit_option_err ${_name} ${_setting}
                 fi ;;
-            "TELEGRAM_PUBKEY")
-                if [[ -e ${_setting} ]]; then
-                    _conf_telegram_pubkey="${_setting}"
+            "TELEGRAM_TOKEN")
+                if [[ -n ${_setting} ]]; then
+                    _conf_telegram_token="${_conf_telegram_token:-${_setting}}"
                 else
                     exit_option_err ${_name} ${_setting}
                 fi ;;
@@ -216,11 +239,11 @@ while [[ -n $1 ]]; do
                 exit 1
             fi
             shift 2 ;;
-        "--key")
-            if [[ -e "${2}" ]]; then
-                _conf_telegram_pubkey="${2}"
+        "--telegram-token")
+            if [[ -n "${2}" ]]; then
+                _conf_telegram_token="${2}"
             else
-                echo "Cannot stat telegram keyfile: ${2}" >&2
+                echo "Invalid Token: ${2}" >&2
                 exit 1
             fi
             shift 2 ;;
@@ -244,7 +267,7 @@ _conf_send_mail=${_conf_send_mail:=1}
 _conf_mail_address=${_conf_mail_address:="root@localhost"}
 _conf_send_telegram=${_conf_send_telegram:=0}
 _conf_telegram_contact=${_conf_telegram_contact}
-_conf_telegram_pubkey=${_conf_telegram_pubkey}
+_conf_telegram_token=${_conf_telegram_token}
 
 # create temporary directory if not exists
 if [[ ! -d "/var/lib/pun" ]]; then
@@ -272,20 +295,19 @@ if [[ ! -x "$( which mail 2> /dev/null )" ]] && (( $_conf_send_mail == 1 )); the
     exit 1
 fi
 
-if [[ ! -x "$( which telegram-cli 2> /dev/null )" ]] && (( $_conf_send_telegram == 1 )); then
-    echo -e "Error: cannot find executable 'telegram-cli'!\nCannot send telegram message, abbort..." >&2
+if [[ ! -x "$( which curl 2> /dev/null )" ]] && (( $_conf_send_telegram == 1 )); then
+    echo -e "Error: cannot find executable 'curl'!\nCannot send telegram message, abbort..." >&2
     exit 1
 fi
 
 
 # update package database
-check_err "$_pacman -Sy" "cannot update database"
+check_err "$_pacman -Sy" "Pacman: cannot update database" > /dev/null
 
 # get updatelist
-pkg_list="$( $list_cmd 2> /dev/null )"
+pkg_list="$( check_err "$list_cmd" "Pacman: cannot fetch update list" )"
 if (( $? != 0 )); then
-    echo "Error: cannot fetch update list"
-    exit 1
+    exit $?
 fi
 
 num_pkg="$( echo -e "${pkg_list}" | wc -l )"

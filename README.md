@@ -1,12 +1,12 @@
 pun - pacman update notifier
 ============================
 
-systemd service that sends an email if your system has pending updates.
+systemd service that sends an email or telegram message if your system has pending updates.
 
-Sends a mail if:
+Sends a notification if:
 
-- last mail was send before last update
-- there are new updates after last mail was send
+- last notification was send before last update
+- there are new updates after last notification was send
 
 
 Features
@@ -16,24 +16,24 @@ Features
 - systemd-unit with timer
 - cron-mail mode (less output)
 - aur support with `package-query`
-- send update-list via mail. Needs a local MTA to be configured.
-- send update-list via [telegram-cli](https://github.com/vysheng/tg) (BETA)
+- send update-list via mail.
+- send update-list via telegram bots.
 
 
 Usage
 -----
 ```
 Usage: pun [OPTIONS]
-    -h ; --help                 Show this help message
-    -c ; --config CONFIG        Use config file CONFIG
-    -p                          Force to use pacman
-    -d                          Dry run: Send no mail, telegram, etc.
-    -v                          Force output of updates list
-         --cron                 Only print if a mail would be send (cron mail compatible)
-    -q ; --quiet                Quiet mode, only errors are printed
-    -m ; --mail ADDRESS         Send update-list via mail to ADDRESS
-    -t ; --telegram CONTACT     Send update-list via telegram to CONTACT
-         --key KEYFILE          Public-Key for local telegram client
+    -h ; --help                       Show this help message"
+    -c ; --config CONFIG              Use config file CONFIG"
+    -p                                Force to use pacman"
+    -d                                Dry run: Send no mail, telegram, etc."
+    -v                                Force output of updates list"
+         --cron                       Only print if a mail would be send (cron mail compatible)"
+    -q ; --quiet                      Quiet mode, only errors are printed"
+    -m ; --mail ADDRESS               Send update-list via mail to ADDRESS"
+    -t ; --telegram ID                Send update-list via telegram to contact ID"
+         --telegram-token TOKEN       API-Token for the telegram telegram bot"
 
 If package-query is installed, it will be used by default.
 Force use of pacman with the -p switch (no aur).
@@ -58,13 +58,11 @@ In this mode you may send the output via cron mail.
 
 ### Telegram
 
-For use with Telegram, install [telegram-cli](https://github.com/vysheng/tg)
-Telegram has to be configured as root user at the moment to access the mail-file(/var/lib/pun/mail_save.txt).
-Pun also needs root-rights to use `pacman -Sy`, so telegram-cli runs as root. We try to fix it, so telegram-cli
-doesn't run as root-user.
+To send telegram messages pun uses an official Telegram Bot. For this Bot to work
+you need to provide your telegram user id.
+You may get your telegram user id with the provided `pun-search-telegram-id` script,
+if you've sent a message to the [NotifyBot](https://telegram.me/notifier_bot).
 
-You need to add the path to your key-file (default: `/etc/telegram-cli/server.pub`) and user-name, who should receive the update
-message to the config file.
 
 Configuration
 -------------
@@ -74,18 +72,20 @@ The default config is in `/etc/pun.conf`. Commandline arguments overwrite this o
     FORCE_PACMAN=0         # force usage of pacman -> no aur support
     OUTPUT=log             # output mode
 
-    USE_MAIL=1             # send notification mail
+    USE_MAIL=0             # send notification mail
     MAIL_ADDRESS=          # destination mail address
 
-    USE_TELEGRAM=1         # send notification message with telegram-cli
-    TELEGRAM_CONTACT=      # destination telegram contact
-    TELEGRAM_PUBKEY=       # public key for telegram client
+    USE_TELEGRAM=0         # send notification message with telegram-cli
+    TELEGRAM_CONTACT=      # destination telegram contact id
+    TELEGRAM_TOKEN=        # token for the PUN telegram bot
 
 Output-modes:
 
 - __none__: don't generate any output (no logs, no mail).
 - __cron__: quiet mode for cron mail. Only generates error messages or output if a mail would have been send.
 - __verbose__: always show package-list, etc.
+
+Don't change the TELEGRAM_TOKEN, unless you know, what you're doing!
 
 
 Errors

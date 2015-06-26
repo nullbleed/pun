@@ -2,7 +2,7 @@
 
 pkgname=pun-git
 _pkgname=pun
-pkgver=v0.6
+pkgver=v0.6.1.gd786e91
 pkgrel=1
 pkgdesc="notifier for system updates (systemd, mail)"
 arch=('any')
@@ -11,14 +11,15 @@ license=('LGPL3')
 depends=('pacman' 'package-query')
 optdepends=('mail: sendmail support (provides mail)'
             'mutt: sendmail support (provides mail)'
-            'telegram-cli: telegram notification integration')
+            'curl: send telegram messages'
+            'python: search your telegram id')
 provides=('pun')
 makedepends=('git')
 install='pun.install'
 source=('git://github.com/nullbleed/pun.git'
         'pun.install')
 sha256sums=('SKIP'
-            '5563b3fe1cc6667920c9d8fbb0e130b347fd7aeb82e739bffb549992d9ec24f2')
+            'a6ca2db25ac9f5bff64e71b839e368c425c9a912c8992b4412385174e8fc3b4c')
 
 pkgver() {
   cd "$_pkgname"
@@ -35,6 +36,7 @@ package() {
   install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$_pkgname/LICENSE"
 
   install -Dm755 pun "$pkgdir/usr/bin/pun"
+  install -Dm755 pun-search-telegram-id "$pkgdir/usr/bin/pun-search-telegram-id"
   install -Dm644 pun.conf "$pkgdir/etc/pun.conf"
 
   install -Dm644 pun.service "$pkgdir/usr/lib/systemd/system/pun.service"
