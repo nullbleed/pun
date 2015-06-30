@@ -2,7 +2,7 @@
 
 pkgname=pun-git
 _pkgname=pun
-pkgver=v0.6.2.g6e78fa5
+pkgver=v0.7
 pkgrel=1
 pkgdesc="notifier for system updates (systemd, mail)"
 arch=('any')
